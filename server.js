@@ -20,7 +20,7 @@ const app = express();
 
 const PORT = process.env.PORT || 5000;
 
-// CORS configuration - allow all Vercel frontends
+// CORS configuration - allow all Vercel and Netlify frontends
 const corsOptions = {
   origin: [
     'http://localhost:5173',
@@ -31,7 +31,9 @@ const corsOptions = {
     'https://raise-realm-frontend-git-master-rohini-tiwari-s-projects.vercel.app',
     'https://raise-realm-frontend-1a2yto1s4-rohini-tiwari-s-projects.vercel.app',
     'https://raise-realm-frontend-56xw0xr6b-rohini-tiwari-s-projects.vercel.app',
-    'https://raise-realm-frontend.vercel.app'
+    'https://raise-realm-frontend.vercel.app',
+    'https://raise-realm.netlify.app',
+    'https://www.raise-realm.netlify.app'
   ],
   credentials: true,
 };
