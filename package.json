@@ -1,0 +1,30 @@
+{
+  "name": "raiserealm-backend",
+  "version": "1.0.0",
+  "description": "RaiseRealm Crowdfunding Platform Backend",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "build:frontend": "cd ../frontend && npm install && npm run build",
+    "start:prod": "npm run build:frontend && node server.js"
+  },
+  "dependencies": {
+    "@stripe/stripe-js": "^8.8.0",
+    "@supabase/supabase-js": "^2.98.0",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-validator": "^7.0.1",
+    "jsonwebtoken": "^9.0.2",
+    "lodash": "^4.17.23",
+    "node-fetch": "^2.7.0",
+    "stripe": "^20.4.0",
+    "supabase": "^2.39.3",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "dotenv-cli": "^11.0.0"
+  }
+}
