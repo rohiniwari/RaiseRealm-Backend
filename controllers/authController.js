@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
+const axios = require('axios');
 const supabase = require('../config/supabase');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key-change-in-production';
@@ -158,7 +159,117 @@ const updateProfile = async (req, res) => {
   }
 };
 
-// Google OAuth login
+// Google OAuth - Authorization Code Flow
+const googleAuthCode = async (req, res) => {
+  try {
+    const { code, redirectUri } = req.body;
+
+    if (!code) {
+      return res.status(400).json({ error: 'Authorization code required' });
+    }
+
+    console.log('Exchanging Google authorization code for tokens...');
+
+    // Exchange authorization code for tokens
+    const tokenResponse = await axios.post('https://oauth2.googleapis.com/token', {
+      client_id: process.env.GOOGLE_CLIENT_ID,
+      client_secret: process.env.GOOGLE_CLIENT_SECRET,
+      code,
+      grant_type: 'authorization_code',
+      redirect_uri: redirectUri
+    });
+
+    const { access_token } = tokenResponse.data;
+
+    if (!access_token) {
+      return res.status(400).json({ error: 'Failed to obtain access token' });
+    }
+
+    // Get user info from Google
+    const userInfoResponse = await axios.get(
+      'https://www.googleapis.com/oauth2/v2/userinfo',
+      { headers: { Authorization: `Bearer ${access_token}` } }
+    );
+
+    const { email, name, picture } = userInfoResponse.data;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email not provided by Google' });
+    }
+
+    // Check if user already exists
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', email)
+      .single();
+
+    let user;
+    if (existingUser) {
+      // User exists, update avatar if needed
+      if (picture && picture !== existingUser.avatar_url) {
+        const { data: updatedUser, error: updateError } = await supabase
+          .from('users')
+          .update({ avatar_url: picture })
+          .eq('id', existingUser.id)
+          .select()
+          .single();
+
+        if (!updateError) {
+          user = updatedUser;
+        } else {
+          user = existingUser;
+        }
+      } else {
+        user = existingUser;
+      }
+    } else {
+      // Create new user
+      const userId = uuidv4();
+      const { data: newUser, error: createError } = await supabase
+        .from('users')
+        .insert({
+          id: userId,
+          email,
+          password_hash: null,
+          name: name || email.split('@')[0],
+          avatar_url: picture || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name || email)}`,
+          created_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('Error creating user:', createError);
+        return res.status(500).json({ error: 'Failed to create user' });
+      }
+
+      user = newUser;
+    }
+
+    // Generate JWT token
+    const jwtToken = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
+
+    res.json({
+      message: 'Authentication successful',
+      token: jwtToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        avatar_url: user.avatar_url
+      }
+    });
+  } catch (error) {
+    console.error('Google Auth Code error:', error.message);
+    if (error.response) {
+      console.error('Google API error:', error.response.data);
+    }
+    res.status(500).json({ error: 'Authentication failed' });
+  }
+};
+
+// Google OAuth login (legacy)
 const googleAuth = async (req, res) => {
   try {
     const { email, name, googleId, avatar_url } = req.body;
@@ -171,9 +282,7 @@ const googleAuth = async (req, res) => {
       .single();
 
     if (existingUser) {
-      // User exists, generate token and return
       const token = jwt.sign({ userId: existingUser.id }, JWT_SECRET, { expiresIn: '7d' });
-
       return res.json({
         message: 'Login successful',
         token,
@@ -193,7 +302,7 @@ const googleAuth = async (req, res) => {
       .insert({
         id: userId,
         email,
-        password_hash: null, // No password for OAuth users
+        password_hash: null,
         name,
         avatar_url: avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`,
         created_at: new Date().toISOString()
@@ -205,7 +314,6 @@ const googleAuth = async (req, res) => {
       return res.status(500).json({ error: error.message });
     }
 
-    // Generate JWT token
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
 
     res.status(201).json({
@@ -229,5 +337,6 @@ module.exports = {
   login,
   getMe,
   updateProfile,
-  googleAuth
+  googleAuth,
+  googleAuthCode
 };

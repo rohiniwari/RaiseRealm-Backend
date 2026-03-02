@@ -14,6 +14,7 @@ const rewardRoutes = require('./routes/rewardRoutes');
 const commentRoutes = require('./routes/commentRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const impactRoutes = require('./routes/impactRoutes');
+const aiRoutes = require('./routes/aiRoutes');
 
 
 const app = express();
@@ -56,6 +57,7 @@ app.use('/api/rewards', rewardRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/impact', impactRoutes);
+app.use('/api/ai', aiRoutes);
 
 
 // Root endpoint - returns a simple message

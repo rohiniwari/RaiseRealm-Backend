@@ -2,8 +2,7 @@ const express = require('express');
 const { body } = require('express-validator');
 const { validate } = require('../middleware/validationMiddleware');
 const { authMiddleware } = require('../middleware/authMiddleware');
-const { register, login, getMe, updateProfile, googleAuth } = require('../controllers/authController');
-
+const { register, login, getMe, updateProfile, googleAuth, googleAuthCode } = require('../controllers/authController');
 
 const router = express.Router();
 
@@ -22,7 +21,13 @@ const loginValidation = [
 // Routes
 router.post('/register', registerValidation, validate, register);
 router.post('/login', loginValidation, validate, login);
-router.post('/google-auth', googleAuth);
+
+// Google OAuth - Authorization Code Flow (preferred, secure)
+router.post('/google-auth', googleAuthCode);
+
+// Legacy Google Auth
+router.post('/google', googleAuth);
+
 router.get('/me', authMiddleware, getMe);
 router.put('/profile', authMiddleware, updateProfile);
 
