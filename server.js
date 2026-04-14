@@ -27,12 +27,7 @@ const corsOptions = {
     'http://localhost:5173',
     'http://localhost:3000', 
     'http://localhost:5000',
-    'https://raiserealm.vercel.app',
-    'https://www.raiserealm.vercel.app',
-    'https://raise-realm-frontend-git-master-rohini-tiwari-s-projects.vercel.app',
-    'https://raise-realm-frontend-1a2yto1s4-rohini-tiwari-s-projects.vercel.app',
-    'https://raise-realm-frontend-56xw0xr6b-rohini-tiwari-s-projects.vercel.app',
-    'https://raise-realm-frontend.vercel.app',
+   
     'https://raise-realm.netlify.app',
     'https://www.raise-realm.netlify.app'
   ],

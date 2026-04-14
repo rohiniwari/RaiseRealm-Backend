@@ -9,7 +9,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key-change-in-pr
 // Register new user
 const register = async (req, res) => {
   try {
-    const { email, password, name } = req.body;
+    const { email, password, name, role = 'backer' } = req.body;
 
     // Check if user already exists
     const { data: existingUser } = await supabase
@@ -34,6 +34,7 @@ const register = async (req, res) => {
         id: userId,
         email,
         password_hash: passwordHash,
+        role,
         name,
         avatar_url: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`,
         created_at: new Date().toISOString()
@@ -55,6 +56,7 @@ const register = async (req, res) => {
         id: user.id,
         email: user.email,
         name: user.name,
+        role: user.role,
         avatar_url: user.avatar_url
       }
     });
@@ -63,6 +65,7 @@ const register = async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 };
+
 
 // Login user
 const login = async (req, res) => {
@@ -89,16 +92,18 @@ const login = async (req, res) => {
     // Generate JWT token
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
 
-    res.json({
+res.json({
       message: 'Login successful',
       token,
       user: {
         id: user.id,
         email: user.email,
         name: user.name,
+        role: user.role,
         avatar_url: user.avatar_url
       }
     });
+
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Server error' });
@@ -118,13 +123,15 @@ const getMe = async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    res.json({
+res.json({
       id: user.id,
       email: user.email,
       name: user.name,
+      role: user.role,
       avatar_url: user.avatar_url,
       created_at: user.created_at
     });
+
   } catch (error) {
     console.error('GetMe error:', error);
     res.status(500).json({ error: 'Server error' });
@@ -283,17 +290,28 @@ const googleAuth = async (req, res) => {
 
     if (existingUser) {
       const token = jwt.sign({ userId: existingUser.id }, JWT_SECRET, { expiresIn: '7d' });
+return res.json({
+>>>>>>> 943eda2 (feat: add user role support (backer/creator) for frontend integration)
+
+=======
       return res.json({
+
+=======
+
+return res.json({
+>>>>>>> 943eda2 (feat: add user role support (backer/creator) for frontend integration)
         message: 'Login successful',
         token,
         user: {
           id: existingUser.id,
           email: existingUser.email,
           name: existingUser.name,
+          role: existingUser.role,
           avatar_url: existingUser.avatar_url
         }
       });
     }
+
 
     // Create new user from Google data
     const userId = uuidv4();

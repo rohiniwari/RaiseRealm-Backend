@@ -8,13 +8,15 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   email TEXT UNIQUE NOT NULL,
-  password_hash TEXT NOT NULL,
+  password_hash TEXT,
+  role TEXT DEFAULT 'backer' CHECK (role IN ('backer', 'creator')),
   name TEXT NOT NULL,
   avatar_url TEXT,
   bio TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
 
 -- Projects table
 CREATE TABLE IF NOT EXISTS projects (
