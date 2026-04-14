@@ -1,36 +1,66 @@
 const { v4: uuidv4 } = require('uuid');
 const supabase = require('../config/supabase');
 
-// Get all projects with filters
+// Get all projects with advanced filters
 const getProjects = async (req, res) => {
   try {
-    const { category, search, sort, limit = 20, offset = 0 } = req.query;
+    const {
+      category, 
+      search, 
+      sort = 'newest', 
+      limit = 20, 
+      offset = 0,
+      status,
+      min_goal,
+      max_goal
+    } = req.query;
 
-    // Simple query first
+    // Base query with joins
     let query = supabase
       .from('projects')
-      .select('*')
-      .eq('status', 'active');
+      .select(`
+        *,
+        creator:users(name, avatar_url),
+        backer_count:contributions!inner(count)
+      `);
 
-    // Filter by category
+    // Status filter
+    if (status) {
+      query = query.eq('status', status);
+    } else {
+      query = query.eq('status', 'active');
+    }
+
+    // Category filter
     if (category && category !== 'all') {
       query = query.eq('category', category);
     }
 
-    // Search by title or description
+    // Goal range
+    if (min_goal) {
+      query = query.gte('goal_amount', parseFloat(min_goal));
+    }
+    if (max_goal) {
+      query = query.lte('goal_amount', parseFloat(max_goal));
+    }
+
+    // Search
     if (search) {
       query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%`);
     }
 
-    // Sort options
+    // Sort
     switch (sort) {
       case 'newest':
         query = query.order('created_at', { ascending: false });
         break;
-      case 'popular':
+      case 'most_funded':
         query = query.order('current_amount', { ascending: false });
         break;
-      case 'ending':
+      case 'popular':
+        query = query.order('backer_count', { ascending: false });
+        break;
+      case 'ending_soon':
         query = query.order('end_date', { ascending: true });
         break;
       default:
@@ -39,40 +69,23 @@ const getProjects = async (req, res) => {
 
     query = query.range(parseInt(offset), parseInt(offset) + parseInt(limit) - 1);
 
-    const { data: projects, error } = await query;
+    const { data: projects, error, count } = await query;
 
     if (error) {
       return res.status(500).json({ error: error.message });
     }
 
-    // Get creator info for each project
-    const formattedProjects = await Promise.all(projects.map(async (project) => {
-      // Get creator info
-      const { data: user } = await supabase
-        .from('users')
-        .select('id, name, avatar_url')
-        .eq('id', project.user_id)
-        .single();
-
-      // Get backer count
-      const { count: backerCount } = await supabase
-        .from('contributions')
-        .select('*', { count: 'exact', head: true })
-        .eq('project_id', project.id);
-
-      return {
-        ...project,
-        backer_count: backerCount || 0,
-        creator: user || null
-      };
-    }));
-
-    res.json(formattedProjects);
+    res.json({
+      projects,
+      total: count,
+      has_more: parseInt(offset) + projects.length < count
+    });
   } catch (error) {
     console.error('GetProjects error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 };
+
 
 // Get single project by ID
 const getProjectById = async (req, res) => {
