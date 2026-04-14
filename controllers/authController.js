@@ -66,7 +66,6 @@ const register = async (req, res) => {
   }
 };
 
-
 // Login user
 const login = async (req, res) => {
   try {
@@ -92,7 +91,7 @@ const login = async (req, res) => {
     // Generate JWT token
     const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
 
-res.json({
+    res.json({
       message: 'Login successful',
       token,
       user: {
@@ -103,7 +102,6 @@ res.json({
         avatar_url: user.avatar_url
       }
     });
-
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Server error' });
@@ -123,7 +121,7 @@ const getMe = async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-res.json({
+    res.json({
       id: user.id,
       email: user.email,
       name: user.name,
@@ -131,7 +129,6 @@ res.json({
       avatar_url: user.avatar_url,
       created_at: user.created_at
     });
-
   } catch (error) {
     console.error('GetMe error:', error);
     res.status(500).json({ error: 'Server error' });
@@ -264,7 +261,8 @@ const googleAuthCode = async (req, res) => {
         id: user.id,
         email: user.email,
         name: user.name,
-        avatar_url: user.avatar_url
+        avatar_url: user.avatar_url,
+        role: user.role
       }
     });
   } catch (error) {
@@ -290,16 +288,7 @@ const googleAuth = async (req, res) => {
 
     if (existingUser) {
       const token = jwt.sign({ userId: existingUser.id }, JWT_SECRET, { expiresIn: '7d' });
-return res.json({
->>>>>>> 943eda2 (feat: add user role support (backer/creator) for frontend integration)
-
-=======
       return res.json({
-
-=======
-
-return res.json({
->>>>>>> 943eda2 (feat: add user role support (backer/creator) for frontend integration)
         message: 'Login successful',
         token,
         user: {
@@ -312,7 +301,6 @@ return res.json({
       });
     }
 
-
     // Create new user from Google data
     const userId = uuidv4();
     const { data: user, error } = await supabase
@@ -321,6 +309,7 @@ return res.json({
         id: userId,
         email,
         password_hash: null,
+        role: 'backer',
         name,
         avatar_url: avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`,
         created_at: new Date().toISOString()
@@ -341,6 +330,7 @@ return res.json({
         id: user.id,
         email: user.email,
         name: user.name,
+        role: user.role,
         avatar_url: user.avatar_url
       }
     });
@@ -358,3 +348,4 @@ module.exports = {
   googleAuth,
   googleAuthCode
 };
+
