@@ -25,10 +25,35 @@ exports.createPaymentIntent = async (req, res) => {
       return res.status(400).json({ error: 'Invalid amount' });
     }
 
+    // Get project and reward min_amounts
+    const { data: project } = await supabase
+      .from('projects')
+      .select('minimum_contribution, goal_amount')
+      .eq('id', project_id)
+      .single();
+
+    let minAmount = project?.minimum_contribution || 1;
+
+    if (reward_id && reward_id !== 'none') {
+      const { data: reward } = await supabase
+        .from('rewards')
+        .select('min_amount')
+        .eq('id', reward_id)
+        .single();
+      minAmount = Math.max(minAmount, reward?.min_amount || 1);
+    }
+
+    if (amount < minAmount) {
+      return res.status(400).json({ error: `Amount too low. Minimum is ${minAmount}` });
+    }
+
+    // Create idempotency key
+    const idempotencyKey = `intent_${user_id}_${Date.now()}`;
+
     // Create payment intent with Stripe
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(amount * 100), // Convert to cents
-      currency: 'usd',
+      currency: 'inr',
       automatic_payment_methods: {
         enabled: true,
       },
@@ -37,17 +62,20 @@ exports.createPaymentIntent = async (req, res) => {
         project_id,
         reward_id: reward_id || 'none',
       },
+      idempotency_key: idempotencyKey,
     });
 
     res.json({
       clientSecret: paymentIntent.client_secret,
       paymentIntentId: paymentIntent.id,
+      minAmount,
     });
   } catch (error) {
     console.error('Error creating payment intent:', error);
     res.status(500).json({ error: 'Failed to create payment intent' });
   }
 };
+
 
 // Handle webhook for payment confirmation
 exports.webhook = async (req, res) => {
