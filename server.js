@@ -29,10 +29,12 @@ const corsOptions = {
     'http://localhost:5000',
    
     'https://raise-realm.netlify.app',
-    'https://www.raise-realm.netlify.app'
+    'https://www.raise-realm.netlify.app',
+    'https://raiserealm.vercel.app'
   ],
   credentials: true,
 };
+
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
