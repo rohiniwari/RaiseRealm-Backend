@@ -71,6 +71,49 @@ const createComment = async (req, res) => {
   }
 };
 
+// Update a comment
+const updateComment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { content } = req.body;
+
+    // Get comment
+    const { data: comment, error: commentError } = await supabase
+      .from('comments')
+      .select('user_id')
+      .eq('id', id)
+      .single();
+
+    if (commentError || !comment) {
+      return res.status(404).json({ error: 'Comment not found' });
+    }
+
+    // Only the comment author can edit
+    if (comment.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    const { data: updatedComment, error } = await supabase
+      .from('comments')
+      .update({ content, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select(`
+        *,
+        user:users(id, name, avatar_url)
+      `)
+      .single();
+
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+
+    res.json(updatedComment);
+  } catch (error) {
+    console.error('UpdateComment error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
 // Delete a comment
 const deleteComment = async (req, res) => {
   try {
@@ -104,5 +147,6 @@ const deleteComment = async (req, res) => {
 module.exports = {
   getProjectComments,
   createComment,
+  updateComment,
   deleteComment
 };

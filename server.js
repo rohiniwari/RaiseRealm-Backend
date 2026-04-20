@@ -2,6 +2,7 @@ require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 const path = require('path');
 const fs = require('fs');
 
@@ -27,10 +28,10 @@ const corsOptions = {
     'http://localhost:5173',
     'http://localhost:3000', 
     'http://localhost:5000',
-   
     'https://raise-realm.netlify.app',
     'https://www.raise-realm.netlify.app',
-    'https://raiserealm.vercel.app'
+    'https://raiserealm.vercel.app',
+    'https://www.raiserealm.vercel.app'
   ],
   credentials: true,
 };
@@ -45,8 +46,15 @@ app.use((req, res, next) => {
   next();
 });
 
+// Rate limiting for auth routes
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // limit each IP to 20 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.',
+});
+
 // API Routes
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/contributions', contributionRoutes);
 app.use('/api/milestones', milestoneRoutes);

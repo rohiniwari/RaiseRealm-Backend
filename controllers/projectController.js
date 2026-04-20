@@ -147,6 +147,11 @@ const getProjectById = async (req, res) => {
 // Create new project
 const createProject = async (req, res) => {
   try {
+    // Check if user is a creator
+    if (req.user.role !== 'creator') {
+      return res.status(403).json({ error: 'Only creators can create projects' });
+    }
+
     const { title, description, category, goal_amount, image_url, end_date, rewards, milestones } = req.body;
 
     const projectId = uuidv4();
@@ -392,6 +397,85 @@ const getBackedProjects = async (req, res) => {
   }
 };
 
+const getProjectAnalytics = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const { range = '30days' } = req.query;
+
+    // Calculate date range
+    const now = new Date();
+    let startDate;
+    switch (range) {
+      case '7days':
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case '30days':
+        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        break;
+      case '90days':
+        startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+        break;
+      default:
+        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    }
+
+    // Get contributions grouped by date
+    const { data: contributions, error } = await supabase
+      .from('contributions')
+      .select('amount, created_at')
+      .eq('project_id', projectId)
+      .gte('created_at', startDate.toISOString())
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+
+    // Group by date
+    const dailyData = {};
+    contributions.forEach(contrib => {
+      const date = new Date(contrib.created_at).toISOString().split('T')[0];
+      if (!dailyData[date]) {
+        dailyData[date] = { amount: 0, count: 0 };
+      }
+      dailyData[date].amount += parseFloat(contrib.amount);
+      dailyData[date].count += 1;
+    });
+
+    // Convert to array
+    const analytics = Object.keys(dailyData).map(date => ({
+      date,
+      amount: dailyData[date].amount,
+      count: dailyData[date].count
+    }));
+
+    res.json(analytics);
+  } catch (error) {
+    console.error('GetProjectAnalytics error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
+const getSuccessStories = async (req, res) => {
+  try {
+    const { data: projects, error } = await supabase
+      .from('projects')
+      .select('*')
+      .gte('current_amount', supabase.raw('goal_amount'))
+      .order('current_amount', { ascending: false })
+      .limit(10);
+
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+
+    res.json(projects);
+  } catch (error) {
+    console.error('GetSuccessStories error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
+
 module.exports = {
   getProjects,
   getProjectById,
@@ -399,5 +483,7 @@ module.exports = {
   updateProject,
   deleteProject,
   getUserProjects,
-  getBackedProjects
+  getBackedProjects,
+  getProjectAnalytics,
+  getSuccessStories
 };

@@ -9,7 +9,9 @@ const {
   updateProject,
   deleteProject,
   getUserProjects,
-  getBackedProjects
+  getBackedProjects,
+  getProjectAnalytics,
+  getSuccessStories
 } = require('../controllers/projectController');
 
 const router = express.Router();
@@ -25,8 +27,10 @@ const projectValidation = [
 
 // Routes
 router.get('/', optionalAuth, getProjects);
+router.get('/success-stories', optionalAuth, getSuccessStories);
 router.get('/my-projects', authMiddleware, getUserProjects);
 router.get('/backed', authMiddleware, getBackedProjects);
+router.get('/:id/analytics', authMiddleware, getProjectAnalytics);
 router.get('/:id', optionalAuth, getProjectById);
 router.post('/', authMiddleware, projectValidation, validate, createProject);
 router.put('/:id', authMiddleware, updateProject);

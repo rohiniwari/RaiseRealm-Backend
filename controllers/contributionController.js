@@ -50,11 +50,10 @@ const createContribution = async (req, res) => {
         return res.status(400).json({ error: `Minimum contribution for this reward is $${reward.min_amount}` });
       }
 
-      // Update reward backer count
-      await supabase
-        .from('rewards')
-        .update({ current_backers: reward.current_backers + 1 })
-        .eq('id', reward_id);
+      // Update reward backer count using atomic RPC
+      await supabase.rpc('increment_reward_backers', {
+        reward_id,
+      });
     }
 
     // Create contribution record
@@ -77,15 +76,21 @@ const createContribution = async (req, res) => {
       return res.status(500).json({ error: error.message });
     }
 
-    // Update project current amount
-    const newAmount = project.current_amount + amount;
-    await supabase
+    // Update project current amount using atomic RPC
+    await supabase.rpc('increment_project_amount', {
+      project_id,
+      amount,
+    });
+
+    // Get updated project amount for milestone check
+    const { data: updatedProject } = await supabase
       .from('projects')
-      .update({ current_amount: newAmount })
-      .eq('id', project_id);
+      .select('current_amount, goal_amount')
+      .eq('id', project_id)
+      .single();
 
     // Check if milestone should be triggered
-    const progressPercentage = (newAmount / project.goal_amount) * 100;
+    const progressPercentage = (updatedProject.current_amount / updatedProject.goal_amount) * 100;
     
     // Get milestones and check for release
     const { data: milestones } = await supabase
