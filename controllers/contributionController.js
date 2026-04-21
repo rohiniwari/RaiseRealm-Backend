@@ -113,7 +113,7 @@ const createContribution = async (req, res) => {
       contribution,
       project: {
         ...project,
-        current_amount: newAmount
+        current_amount: updatedProject.current_amount
       }
     });
   } catch (error) {
